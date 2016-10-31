@@ -216,6 +216,9 @@ resource "aws_security_group" "allow_ssh" {
   }
 }
 
+/*
+  End Security Group
+* * * * * * * * * * * * */
 
 
 /* * * * * * * * * * * * 
@@ -238,3 +241,7 @@ resource "aws_instance" "instance" {
       Name = "instance"
   }
 }
+
+/*
+  End Bastion Instance EC2
+* * * * * * * * * * * * */
