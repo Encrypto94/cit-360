@@ -229,7 +229,7 @@ resource "aws_security_group" "allow_ssh" {
 # Creates a EC2 instance
 #
 resource "aws_instance" "instance" {
-  ami = "ami-b04e92d0"
+  ami = "ami-5ec1673e"
   instance_type = "t2.micro"
   subnet_id = "${aws_subnet.public_subnet_a.id}"
   associate_public_ip_address = true
