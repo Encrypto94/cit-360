@@ -5,7 +5,7 @@
     service_name: curriculum
     service_version: 1.0
     app_env: test
-    db_host: localhost
+    db_host: tf-20161120202536694408029u7e.cta3tvlj13sn.us-west-2.rds.amazonaws.com:3306
     db_database: curriculum
     db_username: curriculum
     db_port: 3306
@@ -14,22 +14,18 @@
     - name: Include Secrets
       include_vars: secret.yml
 
-    - name: Find line containing SELINUX and set to permissive
-      become: yes
-      lineinfile: dest=/etc/sysconfig/selinux regexp="^SELINUX=" line="SELINUX=permissive"
-
-    - name: Disable Enforce
-      become: yes
-      command: setenforce 0
-
       #Solved: Changed to root (become)
     - name: Update epel-release
       become: yes
       yum: name=epel-release update_cache=yes state=present
 
+    - name: Install PHP 5.4
+      become: yes
+      shell: yes | yum install php54 php54-fpm php54-ldap php54-mbstring php54-mcrypt php54-pdo
+
     - name: Update multiple php services
       become: yes
-      yum: name=nginx,php,php-fpm,php-ldap,php-mbstring,php-mcrypt,php-mysql,php-phpunit-PHPUnit update_cache=yes state=present
+      yum: name=nginx update_cache=yes state=present
       register: nginx_install
 
       #Solved Warning: split up to get_url and shell

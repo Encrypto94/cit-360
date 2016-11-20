@@ -193,6 +193,14 @@ resource "aws_route_table_association" "private_subnet_c_rt_assoc" {
 * * * * * * * * * * * * */
 
 
+
+
+
+
+
+
+
+
 /* * * * * * * * * * * * 
   Security Group
 */
@@ -216,9 +224,96 @@ resource "aws_security_group" "allow_ssh" {
   }
 }
 
+# # # # # # # # # # # # # # #
+# Set rule to allow all inbound HTTP
+#
+resource "aws_security_group" "allow_all_http" {
+  name = "allow_all_http"
+  description = "Allow all http traffic"
+
+  ingress {
+      from_port = 80
+      to_port = 80
+      protocol = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags {
+    Name = "allow_all_http"
+  }
+}
+
+# # # # # # # # # # # # # # #
+# Set rule to allow all outbound traffic
+#
+resource "aws_security_group" "allow_all_out" {
+  name = "allow_all_out"
+  description = "Allow all outbound traffic"
+
+  egress {
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags {
+    Name = "allow_all_out"
+  }
+}
+
+# # # # # # # # # # # # # # #
+# Set rule to allow incoming intern DB traffic
+#
+resource "aws_security_group" "allow_intern_db" {
+  name = "allow_intern_db"
+  description = "Allow inbound db traffic"
+
+  ingress {
+      from_port = 3306
+      to_port = 3306
+      protocol = "tcp"
+      cidr_blocks = ["172.31.0.0/16"]
+  }
+
+  tags {
+    Name = "allow_intern_db"
+  }
+}
+
+# # # # # # # # # # # # # # #
+# Set rule to allow incoming intern traffic (HTTP, SSH)
+#
+resource "aws_security_group" "allow_intern_http_ssh" {
+  name = "allow_intern_http_ssh"
+  description = "Allow inbound intern http ssh traffic"
+
+  ingress {
+      from_port = 80
+      to_port = 80
+      protocol = "tcp"
+      cidr_blocks = ["172.31.0.0/16"]
+  }
+
+  ingress {
+      from_port = 22
+      to_port = 22
+      protocol = "tcp"
+      cidr_blocks = ["172.31.0.0/16"]
+  }
+
+  tags {
+    Name = "allow_intern_http_ssh"
+  }
+}
 /*
   End Security Group
 * * * * * * * * * * * * */
+
+
+
+
+
 
 
 /* * * * * * * * * * * * 
@@ -235,13 +330,131 @@ resource "aws_instance" "instance" {
   associate_public_ip_address = true
   key_name = "cit360"
 
-  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}"]
+  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
 
   tags {
       Name = "instance"
   }
 }
 
+# # # # # # # # # # # # # # #
+# Creates a EC2 instance for webservice b
+#
+resource "aws_instance" "webservice_b" {
+  ami = "ami-5ec1673e"
+  instance_type = "t2.micro"
+  subnet_id = "${aws_subnet.private_subnet_b.id}"
+  key_name = "cit360"
+
+  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
+
+  tags {
+      Name = "webservice-b"
+      Service = "curriculum"
+  }
+}
+
+# # # # # # # # # # # # # # #
+# Creates a EC2 instance for webservice c
+#
+resource "aws_instance" "webservice_c" {
+  ami = "ami-5ec1673e"
+  instance_type = "t2.micro"
+  subnet_id = "${aws_subnet.private_subnet_c.id}"
+  key_name = "cit360"
+
+  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
+
+  tags {
+      Name = "webservice-c"
+      Service = "curriculum"
+  }
+}
+
 /*
   End Bastion Instance EC2
 * * * * * * * * * * * * */
+
+
+/* * * * * * * * * * * * 
+  RDS Resources
+*/
+
+# # # # # # # # # # # # # # #
+# Create DB subnet group
+#
+resource "aws_db_subnet_group" "db_subnet" {
+    name = "db_subnet"
+    subnet_ids = ["${aws_subnet.private_subnet_a.id}", "${aws_subnet.private_subnet_b.id}"]
+    tags {
+        Name = "DB Subnet"
+    }
+}
+
+# # # # # # # # # # # # # # #
+# Create DB instance
+#
+resource "aws_db_instance" "db_instance" {
+    allocated_storage    = 5
+    engine               = "mariadb"
+    engine_version       = "10.0.24"
+    instance_class       = "db.t2.micro"
+    multi_az             = false
+    storage_type         = "gp2"
+    name                 = "mariadb"
+    publicly_accessible  = false
+    username             = "root"
+    password             = "${var.db_password}"
+    db_subnet_group_name = "${aws_db_subnet_group.db_subnet.id}"
+    vpc_security_group_ids = ["${aws_security_group.allow_intern_db.id}"]
+}
+
+/*
+  RDS Resources
+* * * * * * * * * * * * */
+
+
+
+/* * * * * * * * * * * * 
+  Elastic Load Balancer
+*/
+
+# Create a new load balancer
+resource "aws_elb" "elb" {
+  name = "elb"
+  subnets = ["${aws_subnet.public_subnet_b.id}", "${aws_subnet.public_subnet_c.id}"]
+
+  listener {
+    instance_port = 80
+    instance_protocol = "http"
+    lb_port = 80
+    lb_protocol = "http"
+  }
+
+  health_check {
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+    timeout = 5
+    target = "HTTP:80/"
+    interval = 30
+  }
+
+  instances = ["${aws_instance.webservice_b.id}","${aws_instance.webservice_c.id}"]
+  connection_draining = true
+  connection_draining_timeout = 60
+
+  security_groups = ["${aws_security_group.allow_all_http.id}"]
+
+  tags {
+    Name = "elastic load balancer"
+  }
+}
+
+/*
+  Elastic Load Balancer
+* * * * * * * * * * * * */
+
+
+
+
+

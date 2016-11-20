@@ -1,5 +1,5 @@
 ---
-- hosts: db
+- hosts: localhost
   tasks:
     - name: Include Secrets
       include_vars: secret.yml
@@ -14,19 +14,7 @@
       become: yes
       yum: name={{ item }} update_cache=yes state=present
       with_items:
-        - MariaDB-server
         - MariaDB-client
-
-    - name: Start MariaDB if not started and start on boot
-      become: yes
-      systemd: name=mariadb state=started enabled=yes
-
-    - name: Render a template to server
-      template: src=db/mariadb_answers.txt dest=/tmp/mariadb_answers.txt mode=0644
-
-    - name: Run mysql_secure_installation with input from mariadb_answers.txt
-      become: yes
-      shell: /usr/bin/mysql_secure_installation </tmp/mariadb_answers.txt
 
       #Solved: Missing permissions to execute
     - name: Unpacking db.tgz and setting permissions 
@@ -34,5 +22,5 @@
 
       #Gives no error for first run, but gives gives permission error for root for every following runs but ignores error
     - name: Create databases with script make_databases.
-      command: ./make_databases.sh {{ db_password }} localhost chdir=~/db
+      command: ./make_databases.sh {{ db_password }} tf-20161119064332410429724lkp.cta3tvlj13sn.us-west-2.rds.amazonaws.com chdir=~/db
       ignore_errors: True
