@@ -219,17 +219,24 @@ resource "aws_security_group" "allow_ssh" {
       cidr_blocks = ["130.166.220.254/32"]
   }
 
+  egress {
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags {
     Name = "allow_ssh"
   }
 }
 
 # # # # # # # # # # # # # # #
-# Set rule to allow all inbound HTTP
+# Set rule to allow incoming ELB traffic
 #
-resource "aws_security_group" "allow_all_http" {
-  name = "allow_all_http"
-  description = "Allow all http traffic"
+resource "aws_security_group" "allow_elb_traffic" {
+  name = "allow_elb_traffic"
+  description = "Allow inbound db traffic"
 
   ingress {
       from_port = 80
@@ -237,18 +244,6 @@ resource "aws_security_group" "allow_all_http" {
       protocol = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags {
-    Name = "allow_all_http"
-  }
-}
-
-# # # # # # # # # # # # # # #
-# Set rule to allow all outbound traffic
-#
-resource "aws_security_group" "allow_all_out" {
-  name = "allow_all_out"
-  description = "Allow all outbound traffic"
 
   egress {
       from_port = 0
@@ -258,15 +253,15 @@ resource "aws_security_group" "allow_all_out" {
   }
 
   tags {
-    Name = "allow_all_out"
+    Name = "allow_elb_traffic"
   }
 }
 
 # # # # # # # # # # # # # # #
 # Set rule to allow incoming intern DB traffic
 #
-resource "aws_security_group" "allow_intern_db" {
-  name = "allow_intern_db"
+resource "aws_security_group" "allow_db_traffic" {
+  name = "allow_db_traffic"
   description = "Allow inbound db traffic"
 
   ingress {
@@ -277,15 +272,15 @@ resource "aws_security_group" "allow_intern_db" {
   }
 
   tags {
-    Name = "allow_intern_db"
+    Name = "allow_db_traffic"
   }
 }
 
 # # # # # # # # # # # # # # #
 # Set rule to allow incoming intern traffic (HTTP, SSH)
 #
-resource "aws_security_group" "allow_intern_http_ssh" {
-  name = "allow_intern_http_ssh"
+resource "aws_security_group" "allow_web_traffic" {
+  name = "allow_web_traffic"
   description = "Allow inbound intern http ssh traffic"
 
   ingress {
@@ -302,8 +297,15 @@ resource "aws_security_group" "allow_intern_http_ssh" {
       cidr_blocks = ["172.31.0.0/16"]
   }
 
+  egress {
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags {
-    Name = "allow_intern_http_ssh"
+    Name = "allow_web_traffic"
   }
 }
 /*
@@ -330,7 +332,7 @@ resource "aws_instance" "instance" {
   associate_public_ip_address = true
   key_name = "cit360"
 
-  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
+  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}"]
 
   tags {
       Name = "instance"
@@ -346,7 +348,7 @@ resource "aws_instance" "webservice_b" {
   subnet_id = "${aws_subnet.private_subnet_b.id}"
   key_name = "cit360"
 
-  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
+  vpc_security_group_ids = ["${aws_security_group.allow_web_traffic.id}"]
 
   tags {
       Name = "webservice-b"
@@ -363,7 +365,7 @@ resource "aws_instance" "webservice_c" {
   subnet_id = "${aws_subnet.private_subnet_c.id}"
   key_name = "cit360"
 
-  vpc_security_group_ids = ["${aws_security_group.allow_ssh.id}","${aws_security_group.allow_intern_http_ssh.id}","${aws_security_group.allow_all_out.id}"]
+  vpc_security_group_ids = ["${aws_security_group.allow_web_traffic.id}"]
 
   tags {
       Name = "webservice-c"
@@ -406,7 +408,7 @@ resource "aws_db_instance" "db_instance" {
     username             = "root"
     password             = "${var.db_password}"
     db_subnet_group_name = "${aws_db_subnet_group.db_subnet.id}"
-    vpc_security_group_ids = ["${aws_security_group.allow_intern_db.id}"]
+    vpc_security_group_ids = ["${aws_security_group.allow_db_traffic.id}"]
 }
 
 /*
@@ -440,10 +442,11 @@ resource "aws_elb" "elb" {
   }
 
   instances = ["${aws_instance.webservice_b.id}","${aws_instance.webservice_c.id}"]
+  cross_zone_load_balancing = true
   connection_draining = true
   connection_draining_timeout = 60
 
-  security_groups = ["${aws_security_group.allow_all_http.id}"]
+  security_groups = ["${aws_security_group.allow_elb_traffic.id}"]
 
   tags {
     Name = "elastic load balancer"
@@ -453,8 +456,3 @@ resource "aws_elb" "elb" {
 /*
   Elastic Load Balancer
 * * * * * * * * * * * * */
-
-
-
-
-

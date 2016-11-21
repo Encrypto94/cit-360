@@ -1,5 +1,5 @@
 ---
-- hosts: localhost
+- hosts: db
   tasks:
     - name: Include Secrets
       include_vars: secret.yml
