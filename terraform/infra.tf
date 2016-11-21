@@ -236,7 +236,7 @@ resource "aws_security_group" "allow_ssh" {
 #
 resource "aws_security_group" "allow_elb_traffic" {
   name = "allow_elb_traffic"
-  description = "Allow inbound db traffic"
+  description = "Allow elb traffic"
 
   ingress {
       from_port = 80
@@ -281,7 +281,7 @@ resource "aws_security_group" "allow_db_traffic" {
 #
 resource "aws_security_group" "allow_web_traffic" {
   name = "allow_web_traffic"
-  description = "Allow inbound intern http ssh traffic"
+  description = "Allow inbound web traffic"
 
   ingress {
       from_port = 80

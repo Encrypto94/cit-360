@@ -5,7 +5,7 @@
     service_name: curriculum
     service_version: 1.0
     app_env: test
-    db_host: tf-20161120202536694408029u7e.cta3tvlj13sn.us-west-2.rds.amazonaws.com:3306
+    db_host: tf-20161121045110881458337hmc.cta3tvlj13sn.us-west-2.rds.amazonaws.com:3306
     db_database: curriculum
     db_username: curriculum
     db_port: 3306
@@ -19,11 +19,11 @@
       become: yes
       yum: name=epel-release update_cache=yes state=present
 
-    - name: Install PHP 5.4
+    - name: Install PHP 5.4 with yum and say yes to all questions
       become: yes
       shell: yes | yum install php54 php54-fpm php54-ldap php54-mbstring php54-mcrypt php54-pdo
 
-    - name: Update multiple php services
+    - name: Update nginx
       become: yes
       yum: name=nginx update_cache=yes state=present
       register: nginx_install
