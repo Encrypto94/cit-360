@@ -1,7 +1,7 @@
 ---
 - hosts: db
   vars: 
-    db_host: tf-201612111948393397257335gt.cta3tvlj13sn.us-west-2.rds.amazonaws.com
+    db_host: tf-20161211201611686200034i7d.cta3tvlj13sn.us-west-2.rds.amazonaws.com
   tasks:
     - name: Include Secrets
       include_vars: secret.yml
