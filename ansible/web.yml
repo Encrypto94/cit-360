@@ -5,7 +5,7 @@
     service_name: curriculum
     service_version: 1.0
     app_env: test
-    db_host: tf-20161121045110881458337hmc.cta3tvlj13sn.us-west-2.rds.amazonaws.com:3306
+    db_host: tf-201612111948393397257335gt.cta3tvlj13sn.us-west-2.rds.amazonaws.com:3306
     db_database: curriculum
     db_username: curriculum
     db_port: 3306
